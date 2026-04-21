@@ -1,0 +1,22 @@
+body {
+    margin: 0px;
+}
+
+div {
+    box-sizing: border-box;
+}
+
+.nav {
+    display: flex;
+    padding: 15px;
+    align-items: center;
+    background-color: grey;
+}
+
+.nav a {
+    margin-right: 10px;
+}
+
+.logo {
+    font-weight: bold;
+}
