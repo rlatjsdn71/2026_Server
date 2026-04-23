@@ -5,6 +5,9 @@ const app = express()
 app.use(express.static(__dirname + '/public'));
 // 경로를 지정해야 css파일, 이미지 파일같은 보조 파일(static파일) 불러올 수 있음
 
+app.set('view engine','ejs'); // ejs 세팅
+// ejs 파일 쓰면 페이지에 서버데이터를 쉽게 집어넣을 수 있음
+
 // 이하 mongodb 라이브러리 설정
 const { MongoClient } = require('mongodb') // mongodb 라이브러리 불러오기
 
@@ -33,6 +36,7 @@ app.get('/', (요청, 응답) => {
 
 // 라우팅 (/news 페이지)
 app.get('/news', (요청, 응답) => {
+    // db에 데이터 입력
     db.collection('post').insertOne({title:'메롱메롱 인서트'}); // post 컬렉션에 내용 입력
     // 컬렉션은 대충 폴더라고 생각
     // 응답.send('뉴스다옹~')
@@ -43,8 +47,7 @@ app.get('/shop', (요청, 응답) => {
 })
 
 app.get('/about', (요청, 응답) => {
-    // db에 데이터 입력
-    // 응답.sendFile(__dirname + '/about.html');
+    응답.sendFile(__dirname + '/about.html');
 })
 
 app.get('/list', async (요청, 응답) => {
@@ -52,5 +55,13 @@ app.get('/list', async (요청, 응답) => {
     // await = 비동기 실행을 동기 처리
 
     console.log(res[0].title); // 서버에서 console.log 하면 터미널에 출력됨
-    응답.send('halu')
+
+    // ejs 파일은 sendFile이 아닌 render 명령어 사용
+    // 기본 경로 설정이 views 폴더롤 되었기 때문에 경로 없이 이름만 입력
+    // 뒤에 아규먼트 추가해서 데이터 보내줄 수 있음 -> 관습적으로 오브젝트 형태로 보낸다
+    응답.render('list.ejs', {posts: res});
+})
+
+app.get('/time', (요청, 응답) => {
+    응답.render('time.ejs', {time: new Date()});
 })

@@ -1,0 +1,42 @@
+<!-- ejs 파일은 일반적으로 views 폴더에 생성 -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>list</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+
+<body class="grey-bg">
+    <!-- <%- include %>로 다른 ejs 파일을 포합 시킬 수 있음(자리에 해당 파일의 html 내용이 들어간다.) -->
+    <!-- 변수를 전달도 가능 일반적으로 오브젝트로 전달 -->
+    <%- include('nav.ejs',{age:20, name:'kim'}) %>
+        <div class="white-bg">
+            <!-- ejs에서 html 안에 js 내용 넣기! -->
+            <!-- <% %> 태그 사용하기 -->
+            <% for(let i=0; i < posts.length; i++){ %>
+                <div class="list-box">
+                    <!-- 서버에서 전송받은 데이터 html에서 사용하기! -->
+                    <!-- <%= %> 태그 사용하기 -->
+                    <h4>
+                        <%= posts[i].title %>
+                    </h4>
+                    <p>
+                        <%= posts[i].content %>
+                    </p>
+                </div>
+                <% }%>
+        </div>
+</body>
+<script>
+    /* ejs 태그 정리
+    <% %>: 자바 스크립트 내용 실행
+    <%- %>: 내용 출력(내용이 html 이면 렌더해줌)
+    <%= %>: 내용 출력(내용 그대로 출력)
+    */
+</script>
+
+</html>
