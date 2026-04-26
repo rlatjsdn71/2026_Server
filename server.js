@@ -5,14 +5,19 @@ const app = express()
 app.use(express.static(__dirname + '/public'));
 // 경로를 지정해야 css파일, 이미지 파일같은 보조 파일(static파일) 불러올 수 있음
 
-app.set('view engine','ejs'); // ejs 세팅
+app.set('view engine', 'ejs'); // ejs 세팅
 // ejs 파일 쓰면 페이지에 서버데이터를 쉽게 집어넣을 수 있음
 
+
+// req.body 사용을 위한 세팅
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // 이하 mongodb 라이브러리 설정
-const { MongoClient } = require('mongodb') // mongodb 라이브러리 불러오기
+const { MongoClient, ObjectId } = require('mongodb') // mongodb 라이브러리 불러오기
 
 let db;
- // 여기에 db 접속 url과 username, password 입력
+// 여기에 db 접속 url과 username, password 입력
 const url = `mongodb://admin:dYvOhN6kQlhvQmzv@ac-smg1vck-shard-00-00.meysf13.mongodb.net:27017,
 ac-smg1vck-shard-00-01.meysf13.mongodb.net:27017,ac-smg1vck-shard-00-02.meysf13.mongodb.net:27017
 /?ssl=true&replicaSet=atlas-rqe29b-shard-0&authSource=admin&appName=Cluster0`;
@@ -37,7 +42,7 @@ app.get('/', (요청, 응답) => {
 // 라우팅 (/news 페이지)
 app.get('/news', (요청, 응답) => {
     // db에 데이터 입력
-    db.collection('post').insertOne({title:'메롱메롱 인서트'}); // post 컬렉션에 내용 입력
+    db.collection('post').insertOne({ title: '메롱메롱 인서트' }); // post 컬렉션에 내용 입력
     // 컬렉션은 대충 폴더라고 생각
     // 응답.send('뉴스다옹~')
 })
@@ -50,18 +55,47 @@ app.get('/about', (요청, 응답) => {
     응답.sendFile(__dirname + '/about.html');
 })
 
+app.post('/about/login', (req, res) => {
+    res.send("로그인~");
+})
+
 app.get('/list', async (요청, 응답) => {
     let res = await db.collection('post').find().toArray(); // post 컬렉션에 있는 모든 내용 불러오기
     // await = 비동기 실행을 동기 처리
 
-    console.log(res[0].title); // 서버에서 console.log 하면 터미널에 출력됨
+    //console.log(res[0].title); // 서버에서 console.log 하면 터미널에 출력됨
 
     // ejs 파일은 sendFile이 아닌 render 명령어 사용
     // 기본 경로 설정이 views 폴더롤 되었기 때문에 경로 없이 이름만 입력
     // 뒤에 아규먼트 추가해서 데이터 보내줄 수 있음 -> 관습적으로 오브젝트 형태로 보낸다
-    응답.render('list.ejs', {posts: res});
+    응답.render('list.ejs', { posts: res });
 })
 
 app.get('/time', (요청, 응답) => {
-    응답.render('time.ejs', {time: new Date()});
+    응답.render('time.ejs', { time: new Date() });
+})
+
+app.get('/write', (req, res) => {
+    res.render('write.ejs', {});
+})
+
+app.post('/newposting', async (req, res) => {
+    // req.body 사용해서 form 태그의 input 내용들 불러오기 (오브젝트 형태 {input_name: 내용, ...})
+    // db에 데이터 저장(삽입)하는 법 (데이터는 오브젝트 형태로 저장)
+    if (req.body.title.length == 0) res.redirect('/write');
+    else {
+        await db.collection('post').insertOne({ title: req.body.title, content: req.body.content });
+        // 리다이렉트
+        res.redirect('/write');
+    }
+})
+
+app.get('/detail/:postID', async (req, res) => {
+    // req.params: url 파라미터에 입력된 값을 오브젝트로 반환
+    console.log(req.params); // {postID: '입력된 값'}
+
+    // db에서 데이터 검색해서 찾는 법! (데이터(오브젝트)를 이용해서 검색)
+    let result = await db.collection('post').findOne({ _id: new ObjectId(req.params.postID) }); // db 상에 맞는 데이터 타입 사용
+    
+    res.render('detail.ejs', { post: result });
 })

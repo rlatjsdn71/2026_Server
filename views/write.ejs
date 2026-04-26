@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="/main.css">
+</head>
+
+<body class="grey-bg">
+    <%- include('nav.ejs')%>
+        <!-- form 태그 사용해서 post 구현하기 -->
+        <!-- action: URL, method: 요청 동작 -->
+        <form action="/newposting" method="POST" class="form-box">
+            <h4>글쓰기</h4>
+            <!-- input 태그에 name을 지정해서 값을 서버에서 값을 불러고오고 구분할 때 사용 -->
+            <input type="text" name="title" placeholder="제목">
+            <input type="text" name="content" placeholder="내용">
+            <!-- submit 타입으로 최종 post 요청 -->
+            <button type="submit">전송</button>
+        </form>
+</body>
+
+</html>
