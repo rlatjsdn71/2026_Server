@@ -90,12 +90,48 @@ app.post('/newposting', async (req, res) => {
     }
 })
 
+// url parameter 사용법~ (/:작명, 여러개 사용 가능)
 app.get('/detail/:postID', async (req, res) => {
     // req.params: url 파라미터에 입력된 값을 오브젝트로 반환
-    console.log(req.params); // {postID: '입력된 값'}
+    // console.log(req.params); // {postID: '입력된 값'}
 
     // db에서 데이터 검색해서 찾는 법! (데이터(오브젝트)를 이용해서 검색)
-    let result = await db.collection('post').findOne({ _id: new ObjectId(req.params.postID) }); // db 상에 맞는 데이터 타입 사용
-    
-    res.render('detail.ejs', { post: result });
+    try {
+        let result = await db.collection('post').findOne({ _id: new ObjectId(req.params.postID) }); // db 상에 맞는 데이터 타입 사용
+        if (result == null)
+            res.status(404).send("존재하지 않는 URL 입니다.");
+        else
+            res.render('detail.ejs', { post: result });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(404).send("존재하지 않는 URL 입니다.")
+    }
+})
+
+app.get('/update/:postID', async (req, res) => {
+    try {
+        let result = await db.collection('post').findOne({ _id: new ObjectId(req.params.postID) }); // db 상에 맞는 데이터 타입 사용
+        if (result == null)
+            res.status(404).send("존재하지 않는 URL 입니다.");
+        else
+            res.render('update.ejs', { post: result });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(404).send("존재하지 않는 URL 입니다.")
+    }
+})
+
+app.post('/updating/:postID', async (req, res) => {
+    if (req.body.title.length == 0) res.redirect('/list');
+    else {
+        // db에서 값 수정하는 기능
+        await db.collection('post').updateOne(
+            // {filter}: 찾을 값
+            { _id: new ObjectId(req.params.postID) },
+            // {$set:{data}}: 수정할 값 ($set 사용 안하면 해당 값이 수정되는 것이 아니라 전체가 덮어씌워짐)
+            { $set: { title: req.body.title, content: req.body.content } });
+        res.redirect('/detail/' + req.params.postID);
+    }
 })
