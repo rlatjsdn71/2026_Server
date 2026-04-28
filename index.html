@@ -18,5 +18,16 @@
     <p>여긴 홈이구요</p>
     <a href="/about"><p>어바웃~</p></a>
     <a href="/list"><p>리스트~</p></a>
+    <form action="/updatetest?_method=PUT" method="POST">
+        <button type="submit">업데이트 테스트</button>
+    </form>
+    <button onclick="QStest()">쿼리스트링 테스트</button>
 </body>
+<script>
+    function QStest(){
+        // query string 문법
+        // ?데이터이름=값&데이터이름2=값2
+        fetch('/querystring?나이=25&이름=홍길동');
+    }
+</script>
 </html>

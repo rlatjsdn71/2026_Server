@@ -10,14 +10,11 @@
 
 <body class="grey-bg">
     <%- include('nav.ejs')%>
-        <!-- form 태그 사용해서 post 구현하기 -->
-        <!-- action: URL, method: 요청 동작 -->
-        <form action="/updating/<%=post._id%>" method="POST" class="form-box">
+        <!-- action: URL 뒤에 ?_method=PUT 입력해서 메소드를 PUT으로 설정 -->
+        <form action="/updating/<%=post._id%>?_method=PUT" method="POST" class="form-box">
             <h4>글수정</h4>
-            <!-- input 태그에 name을 지정해서 값을 서버에서 값을 불러고오고 구분할 때 사용 -->
             <input type="text" name="title" value="<%=post.title%>">
             <input type="text" name="content" value="<%=post.content%>">
-            <!-- submit 타입으로 최종 post 요청 -->
             <button type="submit">전송</button>
         </form>
 </body>

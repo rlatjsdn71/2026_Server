@@ -10,15 +10,48 @@
 
 <body class="grey-bg">
     <%- include('nav.ejs') %>
-        <div class="detail-bg">
-            <h4>
-                <%=post.title%>
-            </h4>
-            <p>
-                <%=post.content%>
-            </p>
-            <button><a href="/update/<%=post._id%>">수정</a></button>
-        </div>
+        <% let temp=post._id %>
+            <div class="detail-bg">
+                <h4>
+                    <%=post.title%>
+                </h4>
+                <p>
+                    <%=post.content%>
+                </p>
+                <button><a href="/update/<%=post._id%>">수정</a></button>
+                <button onclick="DeletePost()">삭제</button>
+            </div>
 </body>
+<script>
+    // 스크립트 태그 안에서 ejs문법 사용하려면 문자열에 담아 사용
+    // let postID = '<%=post._id%>';
+
+    function DeletePost() {
+        /* ajax 사용하기
+        fetch('/', // URL 입력
+        // 설정 입력
+        {
+            method: 'POST',
+            // POST, PUT 요청 시 필요한 설정 및 데이터 입력
+            headers:{ // POST, PUT 설정
+                'Contnet-Type': 'application/json'
+            },
+            body: JSON.stringify({a:1}) // POST, PUT 데이터(숫자, 문자만 가능)
+        });
+        */
+        console.log(postID);
+
+        // query string 문법 사용
+        fetch('/deleting?postID=<%=post._id%>', {
+            method: 'DELETE'
+        }) // 삭제 후 리스트 페이지로 리다이렉트하기
+            .then(response => response.json()) // 서버가 보낸 정보(리다이렉트할 경로) 파싱
+            .then(data => {
+                // 경로 정보로 리다이렉트
+                window.location.href = data.redirectURL // 페이지 url을 변경
+            });
+
+    }   
+</script>
 
 </html>

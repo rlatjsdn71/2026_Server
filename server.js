@@ -1,4 +1,5 @@
-const express = require('express') // express 라이브러리 불러오기
+// express 라이브러리 세팅
+const express = require('express')
 const app = express()
 
 // public 폴더 경로 지정
@@ -12,6 +13,10 @@ app.set('view engine', 'ejs'); // ejs 세팅
 // req.body 사용을 위한 세팅
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// method-override 세팅 (PUT, DELETE 메소드 사용가능)
+const methodOverride = require('method-override');
+app.use(methodOverride('_method'));
 
 // 이하 mongodb 라이브러리 설정
 const { MongoClient, ObjectId } = require('mongodb') // mongodb 라이브러리 불러오기
@@ -123,7 +128,8 @@ app.get('/update/:postID', async (req, res) => {
     }
 })
 
-app.post('/updating/:postID', async (req, res) => {
+// update.ejs의 form 태그에서 메소드를 PUT으로 설정
+app.put('/updating/:postID', async (req, res) => {
     if (req.body.title.length == 0) res.redirect('/list');
     else {
         // db에서 값 수정하는 기능
@@ -134,4 +140,47 @@ app.post('/updating/:postID', async (req, res) => {
             { $set: { title: req.body.title, content: req.body.content } });
         res.redirect('/detail/' + req.params.postID);
     }
+})
+
+app.delete('/deleting', async (req, res) => {
+    // query string 문법 사용
+    await db.collection('post').deleteOne({_id:new ObjectId(req.query.postID)});
+    // deleteOne, deleteMany: updateOne, updateMany 문법과 동일
+
+    // 삭제 후 리스트 페이지로 리다이렉트 하기 (ajax 통신 후 res.redirect, res.render 안됨)
+    res.json({ redirectURL: '/list' }); // 클라이언트에게 리다이렉트할 경로 전달
+})
+
+
+// test 라우팅
+app.put('/updatetest', async (req, res) => {
+    try {
+        await db.collection('post').updateOne(
+            { _id: 1 },
+            // $set: 해당 필드에 값을 덮어씌움
+            // $inc: 해당 필드에 값을 더해줌
+            // $mul: 해당 필드에 값을 곱해줌
+            // $unset: 해당 필드 삭제
+            { $inc: { like: 1 } });
+        // updateMany 조건에 맞는 모든 도큐먼트 갱신
+        await db.collection('post').updateMany(
+            // 조건으로 여러 도큐먼트 필터링 가능
+            // $ne: 다름, $gt: 초과, $gte: 이상, $lt: 미만, $lte: 이하
+            { like: { $gt: 10 } },
+            { $inc: { like: 1 } });
+        let result = await db.collection('post').findOne({ _id: 1 });
+
+        // 예외 처리
+        if (result == null)
+            res.status(404).send("존재하지 않는 URL 입니다.");
+        else
+            res.render('test.ejs', { result: result });
+    }
+    catch {
+        res.render('test');
+    }
+})
+
+app.get('/querystring', async (req, res) => {
+    console.log(req.query);
 })
