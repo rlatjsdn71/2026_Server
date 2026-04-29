@@ -64,16 +64,22 @@ app.post('/about/login', (req, res) => {
     res.send("로그인~");
 })
 
-app.get('/list', async (요청, 응답) => {
-    let res = await db.collection('post').find().toArray(); // post 컬렉션에 있는 모든 내용 불러오기
+app.get('/list/:pageNum', async (req, res) => {
+    let page_num = req.params.pageNum;
+
     // await = 비동기 실행을 동기 처리
+    // let result = await db.collection('post').find().skip((page_num - 1) * 5).limit(5).toArray();
+    // find = post 컬렉션에 있는 모든 내용 불러오기
+    // skip(n) = 앞에서 n개 건너뜀
+    // limit(n) = 최대 n개만 불러오기
+    let result = await db.collection('post').find().toArray();
 
     //console.log(res[0].title); // 서버에서 console.log 하면 터미널에 출력됨
 
     // ejs 파일은 sendFile이 아닌 render 명령어 사용
     // 기본 경로 설정이 views 폴더롤 되었기 때문에 경로 없이 이름만 입력
     // 뒤에 아규먼트 추가해서 데이터 보내줄 수 있음 -> 관습적으로 오브젝트 형태로 보낸다
-    응답.render('list.ejs', { posts: res });
+    res.render('list.ejs', { posts: result, page: page_num });
 })
 
 app.get('/time', (요청, 응답) => {
@@ -144,7 +150,7 @@ app.put('/updating/:postID', async (req, res) => {
 
 app.delete('/deleting', async (req, res) => {
     // query string 문법 사용
-    await db.collection('post').deleteOne({_id:new ObjectId(req.query.postID)});
+    await db.collection('post').deleteOne({ _id: new ObjectId(req.query.postID) });
     // deleteOne, deleteMany: updateOne, updateMany 문법과 동일
 
     // 삭제 후 리스트 페이지로 리다이렉트 하기 (ajax 통신 후 res.redirect, res.render 안됨)

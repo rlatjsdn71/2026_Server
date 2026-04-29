@@ -17,13 +17,15 @@
         <div class="white-bg">
             <!-- ejs에서 html 안에 js 내용 넣기! -->
             <!-- <% %> 태그 사용하기 -->
-            <% for(let i=0; i < posts.length; i++){ %>
+            <% for(let i=(page - 1) * 5; i < page * 5 && i < posts.length; i++){ %>
                 <div class="list-box">
                     <!-- 서버에서 전송받은 데이터 html에서 사용하기! -->
                     <!-- <%= %> 태그 사용하기 -->
                     <h4>
                         <!-- 제목 누르면 해당 detail 페이지로 이동~ -->
-                        <a href="/detail/<%=posts[i]._id%>"><%= posts[i].title %></a>
+                        <a href="/detail/<%=posts[i]._id%>">
+                            <%= posts[i].title %>
+                        </a>
 
                     </h4>
                     <p>
@@ -32,6 +34,13 @@
                 </div>
                 <% }%>
         </div>
+        <div class="test-bg">
+            <% for(let i=0; i < posts.length / 5; i ++){ %>
+                <button onclick="MovePage('<%=i+1%>')">
+                    <%=i + 1%>
+                </button>
+                <%}%>
+        </div>
 </body>
 <script>
     /* ejs 태그 정리
@@ -39,6 +48,9 @@
     <%- %>: 내용 출력(내용이 html 이면 렌더해줌)
     <%= %>: 내용 출력(내용 그대로 출력)
     */
+    function MovePage(page) {
+        window.location.href = '/list/' + page;
+    }
 </script>
 
 </html>
