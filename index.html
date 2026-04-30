@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,27 +8,40 @@
     <link rel="stylesheet" href="/main.css">
     <!-- 경로 상 public 폴더에 있지만 server.js에서 public 폴더를 등록해 놓았으므로 경로 입력하지 않아도 됨 -->
 </head>
+
 <body>
     <div class="nav">
-        <a class="logo", href="/">Myforum</a>
+        <a class="logo" , href="/">Myforum</a>
         <a href="/write">글쓰기</a>
         <a href="/list">리스트</a>
+        <a href="/login">로그인</a>
+        <form action="/logout" method="POST">
+            <button type="submit">로그아웃</button>
+        </form>
     </div>
     <h4>안녕하세요</h4>
     <p>반갑구요</p>
     <p>여긴 홈이구요</p>
-    <a href="/about"><p>어바웃~</p></a>
-    <a href="/list/1"><p>리스트~</p></a>
+    <a href="/about">
+        <p>어바웃~</p>
+    </a>
+    <a href="/list/1">
+        <p>리스트~</p>
+    </a>
+    <a href="/mypage">
+        <p>마이페이지~</p>
+    </a>
     <form action="/updatetest?_method=PUT" method="POST">
         <button type="submit">업데이트 테스트</button>
     </form>
     <button onclick="QStest()">쿼리스트링 테스트</button>
 </body>
 <script>
-    function QStest(){
+    function QStest() {
         // query string 문법
         // ?데이터이름=값&데이터이름2=값2
         fetch('/querystring?나이=25&이름=홍길동');
     }
 </script>
+
 </html>
