@@ -2,6 +2,9 @@
 const express = require('express')
 const app = express()
 
+// dotenv 세팅 (환경변수 파일 사용)
+require('dotenv').config();
+
 // public 폴더 경로 지정
 app.use(express.static(__dirname + '/public'));
 // 경로를 지정해야 css파일, 이미지 파일같은 보조 파일(static파일) 불러올 수 있음
@@ -11,10 +14,9 @@ app.set('view engine', 'ejs');
 // ejs 파일 쓰면 페이지에 서버데이터를 쉽게 집어넣을 수 있음
 
 // DB접속 url: username, password 입력
-const url = `mongodb://admin:dYvOhN6kQlhvQmzv@ac-smg1vck-shard-00-00.meysf13.mongodb.net:27017,
-ac-smg1vck-shard-00-01.meysf13.mongodb.net:27017,ac-smg1vck-shard-00-02.meysf13.mongodb.net:27017
-/?ssl=true&replicaSet=atlas-rqe29b-shard-0&authSource=admin&appName=Cluster0`;
+const url = process.env.DB_URL;
 let db;
+
 
 // req.body 사용을 위한 세팅
 app.use(express.json());
@@ -48,13 +50,13 @@ app.use(session({
 }))
 app.use(passport.session())
 
-// 이하 mongodb 라이브러리 설정
+// mongodb 라이브러리 설정
 const { MongoClient, ObjectId } = require('mongodb') // mongodb 라이브러리 불러오기
 new MongoClient(url).connect().then((client) => { // mongdodb와 연결
     console.log('DB연결성공')
     db = client.db('forum') // forum 데이터 베이스와 연결
-    // 8080은 포트번호
-    app.listen(8080, () => {
+    // 포트번호를 환경변수로 저장하여 사용 ( .env 파일 참고)
+    app.listen(process.env.PORT, () => {
         console.log('http://localhost:8080 에서 서버 실행중')
     })
 }).catch((err) => {
@@ -290,7 +292,7 @@ app.post('/logout', (req, res) => {
     }
 });
 
-// test 라우팅
+// ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ 테스트 테스트 테스트 ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 app.put('/updatetest', async (req, res) => {
     try {
         await db.collection('post').updateOne(
@@ -327,3 +329,20 @@ app.get('/mypage', async (req, res) => {
     if (!req.user) res.redirect('/login');
     else res.render('mypage.ejs', { user: req.user });
 })
+
+// 미들웨어에 대하여...
+function middleTest(req, res, next) {
+    // 파라미터를 req, res, next로 설정하여
+    if (!req.user) res.redirect('/login'); // res.redirect, send, render,
+    req.body.password; // req.body, params, user 등등 사용 가능
+    req.params.password;
+    next(); // 미들웨어 끝나면 next 함수 호출하여 미들웨어 종료
+}
+// 요청 함수 아규먼트로 미들웨어 함수를 전달
+// 해당 요청이 들어오면 미들웨어 먼저 실행 후 본문 실행됨
+// 배열 형태로 여러개의 미들웨어 전달 가능
+app.get('/middletest', middleTest, (req,res)=>{
+    res.send('middle test');
+})
+// app.use(middleTest) // 이하의 API에 대하여 미들웨어 실행시킴
+// app.use('/URL', middleTest) // 이하의 '/URL' 및 '/URL/...'에 대하여 미들웨어 실행시킴
