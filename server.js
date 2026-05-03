@@ -13,11 +13,6 @@ app.use(express.static(__dirname + '/public'));
 app.set('view engine', 'ejs');
 // ejs 파일 쓰면 페이지에 서버데이터를 쉽게 집어넣을 수 있음
 
-// DB접속 url: username, password 입력
-const url = process.env.DB_URL;
-let db;
-
-
 // req.body 사용을 위한 세팅
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -44,15 +39,17 @@ app.use(session({
     saveUninitialized: false, // true:  로그인 안해도 세션 생성
     cookie: { maxAge: 60 * 60 * 1000 }, // cookie.maxAge: 세션 유지 시간 ms 단위(기본값은 2주)
     store: MongoStore.create({
-        mongoUrl: url,
+        mongoUrl: process.env.DB_URL,
         dbName: 'forum'
     })
 }))
 app.use(passport.session())
 
-// mongodb 라이브러리 설정
-const { MongoClient, ObjectId } = require('mongodb') // mongodb 라이브러리 불러오기
-new MongoClient(url).connect().then((client) => { // mongdodb와 연결
+// mongodb 설정 (database.js 참고)
+const { ObjectId } = require("mongodb"); // ObjectID
+const connectDB = require('./database.js'); // database.js에서 내용 불러오기
+let db;
+connectDB.then((client) => { // mongdodb와 연결
     console.log('DB연결성공')
     db = client.db('forum') // forum 데이터 베이스와 연결
     // 포트번호를 환경변수로 저장하여 사용 ( .env 파일 참고)
@@ -63,6 +60,26 @@ new MongoClient(url).connect().then((client) => { // mongdodb와 연결
     console.log(err)
 });
 
+// multer 관련 세팅 (이미지 업로드 기능 AWS)
+const { S3Client } = require('@aws-sdk/client-s3')
+const multer = require('multer')
+const multerS3 = require('multer-s3')
+const s3 = new S3Client({
+    region: 'ap-northeast-2', // aws 서버 위치
+    credentials: {
+        accessKeyId: process.env.AccKey, // AWS accesskey
+        secretAccessKey: process.env.SecKey // AWS secretkey
+    }
+})
+const upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: process.env.Bucket, // 버킷 이름
+        key: function (요청, file, cb) {
+            cb(null, Date.now().toString()) // 업로드시 파일명
+        }
+    })
+})
 
 // 메인페이지 접속 시(get 요청 시) 콜백 함수 실행(/ = 메인페이지)
 app.get('/', (요청, 응답) => {
@@ -116,12 +133,25 @@ app.get('/write', (req, res) => {
     res.render('write.ejs', {});
 })
 
-app.post('/newposting', async (req, res) => {
+// 이미지 업로드 기능인 upload.single('img1') 함수를 미들웨어로 호출 (아규먼트는 input 태그의 name)
+// 여러개의 이미지를 업로드하려면 upload.array('img1', 2) 함수 사용 (2번째 아규먼트는 최대 파일 개수)
+app.post('/newposting', upload.single('img1'), async (req, res) => {
+    // console.log(req.file); // 이미지의 크기 url 등의 정보가 전달됨
+    let img_url = req.file?.location;
+    /* 단, 이미지 업로드 기능에 대해 에러 처리를 하기 위해서는 미들웨어가 아닌 다음과 같이 일반 함수로 호출
+    upload.single('img1')(req, res, (err) => {
+        if(err) return res.send('upload err');
+        else{
+            // 이미지 업로드 완료 시 실행할 코드(본문 전체)
+        }
+    })
+    */
+
     // req.body 사용해서 form 태그의 input 내용들 불러오기 (오브젝트 형태 {input_name: 내용, ...})
     // db에 데이터 저장(삽입)하는 법 (데이터는 오브젝트 형태로 저장)
     if (req.body.title.length == 0) res.redirect('/write');
     else {
-        await db.collection('post').insertOne({ title: req.body.title, content: req.body.content });
+        await db.collection('post').insertOne({ title: req.body.title, content: req.body.content, img: img_url });
         // 리다이렉트
         res.redirect('/write');
     }
@@ -181,7 +211,7 @@ app.delete('/deleting', async (req, res) => {
     // deleteOne, deleteMany: updateOne, updateMany 문법과 동일
 
     // 삭제 후 리스트 페이지로 리다이렉트 하기 (ajax 통신 후 res.redirect, res.render 안됨)
-    res.json({ redirectURL: '/list' }); // 클라이언트에게 리다이렉트할 경로 전달
+    res.json({ redirectURL: '/list/1' }); // 클라이언트에게 리다이렉트할 경로 전달
 })
 
 // 로그인 시퀀스
@@ -292,6 +322,9 @@ app.post('/logout', (req, res) => {
     }
 });
 
+// 다른 파일의 내용(api) 불러 사용하기 (미들웨어 식으로 등록)
+app.use('/shop', require('./routes/shop.js'));
+
 // ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ 테스트 테스트 테스트 ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
 app.put('/updatetest', async (req, res) => {
     try {
@@ -341,7 +374,7 @@ function middleTest(req, res, next) {
 // 요청 함수 아규먼트로 미들웨어 함수를 전달
 // 해당 요청이 들어오면 미들웨어 먼저 실행 후 본문 실행됨
 // 배열 형태로 여러개의 미들웨어 전달 가능
-app.get('/middletest', middleTest, (req,res)=>{
+app.get('/middletest', middleTest, (req, res) => {
     res.send('middle test');
 })
 // app.use(middleTest) // 이하의 API에 대하여 미들웨어 실행시킴

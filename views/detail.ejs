@@ -18,8 +18,13 @@
                 <p>
                     <%=post.content%>
                 </p>
-                <button><a href="/update/<%=post._id%>">수정</a></button>
-                <button onclick="DeletePost()">삭제</button>
+                <%if(post.img){%>
+                    <img src=<%=post.img%> class="detail-img">
+                    <%}%>
+                        <div>
+                            <button><a href="/update/<%=post._id%>">수정</a></button>
+                            <button onclick="DeletePost()">삭제</button>
+                        </div>
             </div>
 </body>
 <script>
