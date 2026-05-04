@@ -82,8 +82,21 @@ a {
     margin-top: 10px;
 }
 
-.detail-img{
+.detail-img {
     width: 50%;
+}
+
+.search-box {
+    margin-left: 20px;
+    padding: 5px;
+}
+
+.search-btn {
+    padding: 6px 10px;
+    background: lightgray;
+    border: none;
+    border-radius: 5px;
+    vertical-align: middle;
 }
 
 .test-bg {

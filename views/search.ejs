@@ -47,20 +47,11 @@
         </div>
 </body>
 <script>
-    /* ejs 태그 정리
-    <% %>: 자바 스크립트 내용 실행
-    <%- %>: 내용 출력(내용이 html 이면 렌더해줌)
-    <%= %>: 내용 출력(내용 그대로 출력)
-    */
-   
     function MovePage(page) {
-            window.location.href = '/list/' + page;
+            window.location.href = `/search/?target=${'<%=target%>'}&page=${page}`;
     }
-
-    // JS로 get 요청 구현하기
     document.querySelector('.search-btn').addEventListener('click', () => {
         let target = document.querySelector('.search-box').value;
-        // window.location.href 하면 해당 url로 get 요청 날려줌
         window.location.href = `/search/?target=${target}&page=1`
     })
 </script>
