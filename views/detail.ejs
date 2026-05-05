@@ -21,15 +21,50 @@
                 <%if(post.img){%>
                     <img src=<%=post.img%> class="detail-img">
                     <%}%>
-                        <div>
-                            <button><a href="/update/<%=post._id%>">수정</a></button>
-                            <button onclick="DeletePost()">삭제</button>
-                        </div>
+                        <%if(post.user){%>
+                            <p>작정자: <%=post.user%>
+                            </p>
+                            <%}%>
+                                <!-- 작성자와 사용자가 같아야 수정, 삭제 버튼 출력 -->
+                                <%if(user && post.user==user?.username){%>
+                                    <div>
+                                        <button><a href="/update/<%=post._id%>">수정</a></button>
+                                        <button onclick="DeletePost()">삭제</button>
+                                    </div>
+                                    <%}%>
             </div>
+            <div class="white-bg">
+            <h4 class="list-box" style="margin: 5px;">댓글 <%=comments.length%></h4>
+            <% for(let i=(page - 1) * 5; i < page * 5 && i < comments.length; i++){ %>
+                <div class="list-box">
+                    <h5><%=comments[i].user%></h5>
+                    <p><%=comments[i].content%></p>
+                    <%if(user && (post.user == user?.username || comments[i].user == user?.username)){%>
+                        <button onclick="DeleteComment('<%=comments[i]._id%>')">삭제</button>
+                    <%}%>
+                </div>
+            <% }%>
+            <div class="test-bg">
+            <% for(let i=0; i < comments.length / 5; i++){ %>
+                <button onclick="MovePage('<%=i+1%>')">
+                    <%=i + 1%>
+                </button>
+                <%}%>
+        </div>
+        </div>
+            <form action="/comment?postID=<%=post._id%>" method="POST" class="form-box">
+                <h4>댓글쓰기</h4>
+                <input type="text" name="content" placeholder="댓글">
+                <button type="submit">전송</button>
+            </form>
 </body>
 <script>
     // 스크립트 태그 안에서 ejs문법 사용하려면 문자열에 담아 사용
     // let postID = '<%=post._id%>';
+
+    function MovePage(page) {
+            window.location.href = '/detail/<%=post._id%>/' + page;
+    }
 
     function DeletePost() {
         /* ajax 사용하기
@@ -57,7 +92,16 @@
                 window.location.href = data.redirectURL // 페이지 url을 변경
             });
 
-    }   
+    }
+
+    function DeleteComment(commentID){
+        fetch(`/delComment?commentID=${commentID}`, {
+            method: 'DELETE'
+        })
+        .then(()=>{
+            window.location.href = '/detail/<%=post._id%>/1'
+        });
+    }
 </script>
 
 </html>

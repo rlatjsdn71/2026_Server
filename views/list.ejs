@@ -23,9 +23,12 @@
                     <!-- <%= %> 태그 사용하기 -->
                     <h4>
                         <!-- 제목 누르면 해당 detail 페이지로 이동~ -->
-                        <a href="/detail/<%=posts[i]._id%>">
+                        <a href="/detail/<%=posts[i]._id%>/1">
                             <%= posts[i].title %>
                         </a>
+                        <%if(posts[i].img){%>
+                            <span>*</span>
+                        <%}%>
 
                     </h4>
                     <p>

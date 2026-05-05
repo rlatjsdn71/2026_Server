@@ -25,12 +25,12 @@ router.use(session({
 router.use(passport.session())
 
 // DB 내용 사용하기
-const {ObjectId} = require("mongodb");
+const { ObjectId } = require("mongodb");
 const connectDB = require('./../database.js');
 let db;
-connectDB.then((client)=>{
+connectDB.then((client) => {
     db = client.db('forum');
-}).catch((err)=>{
+}).catch((err) => {
     console.log(err);
 });
 
@@ -83,7 +83,11 @@ passport.deserializeUser(async (user, done) => {
 
 // 로그인 페이지
 router.get('/login', async (req, res) => {
-    if (!req.user) res.render('login.ejs');
+    if (!req.user) {
+        let fail = false;
+        if (req.query.fail) fail = true;
+        res.render('login.ejs', {fail: fail});
+    }
     else res.redirect('/');
 })
 
@@ -91,12 +95,20 @@ router.get('/login', async (req, res) => {
 router.post('/login', async (req, res, next) => {
     // 아이디 비밀먼호 확인
     passport.authenticate('local', (error, user, info) => { // 확인 이후 실행시킬 내용 콜백함수로 작성
-        if (error) return res.status(500).json(error); // 에러처리
-        if (!user) return res.status(5401).json(info.message); // 로그인 실패(아이디 비밀번호 불일치) 처리
-        req.logIn(user, (err) => { // 로그인 성공 처리
-            if (err) return next(err); // 로그인 성공해도 에러 발생 할 수 있으므로 에러 처리
-            res.redirect('/');
-        })
+        // 에러처리
+        if (error) return res.status(500).json(error);
+
+        // 로그인 실패(아이디 비밀번호 불일치) 처리
+        if (!user) res.redirect('/login?fail=1'); // 로그인 페이지로 리다이렉트 (로그인 실패 문구 표기)
+        // return res.status(5401).json(info.message); // 로그인 실패 에러 메시지 전송 (이거 실행하면 로그인 실패가 에러로 처리됨)
+
+        // 로그인 성공 처리
+        else {
+            req.logIn(user, (err) => {
+                if (err) return next(err); // 로그인 성공해도 에러 발생 할 수 있으므로 에러 처리
+                res.redirect('/');
+            })
+        }
     })(req, res, next) // 아규먼트로는 req, res, next 필요
 })
 

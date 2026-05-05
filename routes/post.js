@@ -1,7 +1,7 @@
 const router = require('express').Router();
 
 // multer 관련 세팅 (이미지 업로드 기능 AWS)
-const { S3Client } = require('@aws-sdk/client-s3')
+const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3')
 const multer = require('multer')
 const multerS3 = require('multer-s3')
 const s3 = new S3Client({
@@ -52,14 +52,17 @@ router.get('/list/:pageNum', async (req, res) => {
 
 // 글쓰기
 router.get('/write', (req, res) => {
-    res.render('write.ejs', {});
+    // 로그인 해야 글쓰기 가능
+    if (req.user)
+        res.render('write.ejs', {});
+    else
+        res.redirect('/login');
 })
 
 // 이미지 업로드 기능인 upload.single('img1') 함수를 미들웨어로 호출 (아규먼트는 input 태그의 name)
 // 여러개의 이미지를 업로드하려면 upload.array('img1', 2) 함수 사용 (2번째 아규먼트는 최대 파일 개수)
 router.post('/newposting', upload.single('img1'), async (req, res) => {
     // console.log(req.file); // 이미지의 크기 url 등의 정보가 전달됨
-    let img_url = req.file?.location;
     /* 단, 이미지 업로드 기능에 대해 에러 처리를 하기 위해서는 미들웨어가 아닌 다음과 같이 일반 함수로 호출
     upload.single('img1')(req, res, (err) => {
         if(err) return res.send('upload err');
@@ -71,16 +74,22 @@ router.post('/newposting', upload.single('img1'), async (req, res) => {
 
     // req.body 사용해서 form 태그의 input 내용들 불러오기 (오브젝트 형태 {input_name: 내용, ...})
     // db에 데이터 저장(삽입)하는 법 (데이터는 오브젝트 형태로 저장)
-    if (req.body.title.length == 0) res.redirect('/write');
+    if (req.body.title.length == 0 || !req.user) res.redirect('/write');
     else {
-        await db.collection('post').insertOne({ title: req.body.title, content: req.body.content, img: img_url });
-        // 리다이렉트
-        res.redirect('/write');
+        let result = await db.collection('post').insertOne(
+            {
+                title: req.body.title,
+                content: req.body.content,
+                img: req.file?.location,
+                user: req.user.username // 글 작성시 username(아이디) 포함
+            });
+        // detail 페이지로 리다이렉트
+        res.redirect(`/detail/${result.insertedId}/1`);
     }
 })
 
 // url parameter 사용법~ (/:작명, 여러개 사용 가능)
-router.get('/detail/:postID', async (req, res) => {
+router.get('/detail/:postID/:pageNum', async (req, res) => {
     // req.params: url 파라미터에 입력된 값을 오브젝트로 반환
     // console.log(req.params); // {postID: '입력된 값'}
 
@@ -88,10 +97,12 @@ router.get('/detail/:postID', async (req, res) => {
     try {
         // db 상에 맞는 데이터 타입 사용
         let result = await db.collection('post').findOne({ _id: new ObjectId(req.params.postID) });
+        let comments = await db.collection('comment').find({ postID: new ObjectId(req.params.postID) }).toArray();
+
         if (result == null)
             res.status(404).send("존재하지 않는 URL 입니다.");
         else
-            res.render('detail.ejs', { post: result });
+            res.render('detail.ejs', { post: result, user: req.user, comments: comments, page: req.params.pageNum });
     }
     catch (e) {
         console.log(e);
@@ -120,20 +131,50 @@ router.put('/updating/:postID', async (req, res) => {
         // db에서 값 수정하는 기능
         await db.collection('post').updateOne(
             // {filter}: 찾을 값
-            { _id: new ObjectId(req.params.postID) },
+            {
+                _id: new ObjectId(req.params.postID),
+                username: req.user.username // 작성자와 사용자가 같아야 글 수정 가능
+            },
             // {$set:{data}}: 수정할 값 ($set 사용 안하면 해당 값이 수정되는 것이 아니라 전체가 덮어씌워짐)
             { $set: { title: req.body.title, content: req.body.content } });
         res.redirect('/detail/' + req.params.postID);
     }
 })
 
+// 글 삭제
 router.delete('/deleting', async (req, res) => {
-    // query string 문법 사용
-    await db.collection('post').deleteOne({ _id: new ObjectId(req.query.postID) });
-    // deleteOne, deleteMany: updateOne, updateMany 문법과 동일
+    if (!req.user) res.json({ redirectURL: '/login' });
+    else {
+        // query string 문법 사용
+        let target = await db.collection('post').findOne({ _id: new ObjectId(req.query.postID) });
+    
+        // 이미지 삭제
+        if (target.img) {
+            try {
+                let key = target.img.split('/');
+                // 이미지 삭제를 위한 DeleteObjectCommand 오브젝트 생성
+                const deleteObject = new DeleteObjectCommand({
+                    Bucket: process.env.Bucket, // 버킷 이름
+                    Key: key[key.length-1] // 삭제할 이미지 key (이미지 url의 마지막 요소)
+                });
+                // s3에게 삭제 오브젝트를 전송해 삭제 처리
+                await s3.send(deleteObject);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        
+        await db.collection('comment').deleteMany({ postID: target._id });
+        await db.collection('post').deleteOne({
+            _id: target._id,
+            user: req.user.username // 작성자와 사용자가 같아야 글 삭제 가능
+        });
+        // deleteOne, deleteMany: updateOne, updateMany 문법과 동일
 
-    // 삭제 후 리스트 페이지로 리다이렉트 하기 (ajax 통신 후 res.redirect, res.render 안됨)
-    res.json({ redirectURL: '/list/1' }); // 클라이언트에게 리다이렉트할 경로 전달
+        // 삭제 후 리스트 페이지로 리다이렉트 하기 (ajax 통신 후 res.redirect, res.render 안됨)
+        res.json({ redirectURL: '/list/1' }); // 클라이언트에게 리다이렉트할 경로 전달
+        // 사실 그냥 send만 보내고 'detail.ejs' 파일에서 '/list/1'으로 리다이렉트하면 됨
+    }
 })
 
 // 검색 기능
@@ -158,6 +199,25 @@ router.get('/search', async (req, res) => {
     // aggregate 함수와 검색 조건을 사용해서 검색
     let result = await db.collection('post').aggregate(search_condition).toArray();
     res.render('search.ejs', { posts: result, page: req.query.page, target: req.query.target });
+})
+
+// 댓글 작성
+router.post('/comment', async (req, res) => {
+    if (!req.user) res.redirect('/login');
+    else if (req.body.content.length == 0) res.redirect(`/detail/${req.query.postID}/1`);
+    else {
+        await db.collection('comment').insertOne({
+            postID: new ObjectId(req.query.postID),
+            user: req.user.username,
+            content: req.body.content
+        });
+        res.redirect(`/detail/${req.query.postID}/1`);
+    }
+})
+// 댓글 삭제
+router.delete('/delComment', async (req, res) => {
+    await db.collection('comment').deleteOne({ _id: new ObjectId(req.query.commentID) });
+    res.send();
 })
 
 module.exports = router;

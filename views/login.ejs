@@ -15,6 +15,9 @@
             <input type="text" name="username" placeholder="id">
             <input type="password" name="password" placeholder="pw">
             <button type="submit">전송</button>
+            <%if(fail){%>
+            <p style="color: red;">아이디 또는 비밀번호가 일치하지 않습니다.</p>
+        <%}%>
         </form>
         <a href="/register">가입</a>
 </body>
