@@ -21,6 +21,12 @@ app.use(express.urlencoded({ extended: true }));
 const methodOverride = require('method-override');
 app.use(methodOverride('_method'));
 
+// Socket.io 세팅(실시간 통신)
+const { createServer } = require('http')
+const { Server } = require('socket.io')
+const server = createServer(app)
+const io = new Server(server)
+
 // mongodb 설정 (database.js 참고)
 const { ObjectId } = require("mongodb"); // ObjectID
 const connectDB = require('./database.js'); // database.js에서 내용 불러오기
@@ -29,7 +35,7 @@ connectDB.then((client) => { // mongdodb와 연결
     console.log('DB연결성공')
     db = client.db('forum') // forum 데이터 베이스와 연결
     // 포트번호를 환경변수로 저장하여 사용 ( .env 파일 참고)
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
         console.log('http://localhost:8080 에서 서버 실행중')
     })
 }).catch((err) => {
@@ -47,6 +53,78 @@ app.use('/', require('./routes/login.js'));
 
 // 게시물 관련 기능 불러오기
 app.use('/', require('./routes/post.js'));
+
+// 채팅 기능 불러오기
+app.use('/chat', require("./routes/chat.js"));
+
+// 웹소켓(실시간 채팅 기능)
+// 웹소켓 연결 시 실행
+io.on('connection', (socket) => {
+    /* 함수 설명~
+    // socket.on() 데이터 수신 시 실행
+    socket.on('유저데이터이름', (data)=>{ // '데이터이름' 수신 시 실행 (이름 같아야함!!)
+        console.log(data);
+
+        // io.emit: 모든 유저에게 데이터 송신
+        io.emit('서버데이터이름', '서버데이터');
+    })
+
+    // socket.join(): 현재 연결된 유저를 룸에 조인시킴
+    socket.join('룸이름');
+
+    // 특정 룸에만 데이터 전송
+    io.to('룸이름').emit('룸데이터이름', '룸데이터');
+    */
+
+    // 실제 기능 설명
+    // 유저를 룸에 조인시키기
+    socket.on('ask-join', (data) => {
+        socket.join(data); // 룸 이름은 채팅방 _id
+    });
+
+    // 유저에게서 메시지가 왔을 때
+    /* 메시지 형식
+    room: '<%=room._id%>', 룸 이름
+    user: '<%=user%>', 보낸 유저
+    msg: data 메시지 내용
+    */
+    socket.on('message', (data) => {
+        // 날짜 정보
+        let date = new Date()
+        // 룸에 포함된 유저들에게 메시지 전송
+        io.to(data.room).emit('broadcast', {
+            user: data.user, // 보낸 유저
+            date: date, // 날짜
+            msg: data.msg // 내용
+        });
+        // 메시지 내용 db에 저장(굳이 await 쓸 필요 없으니까 안씀)
+        db.collection('chatting').insertOne({
+            chatID: new ObjectId(data.room), // 룸 id
+            user: data.user, // 보낸 유저
+            content: data.msg, // 내용
+            date: date // 날짜
+        });
+    });
+});
+// 채팅방 나가기(삭제) 기능 구현해보장~
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ 테스트 연습 메모 ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ //

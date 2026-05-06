@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="/main.css">
+</head>
+
+<body class="grey-bg">
+    <%- include('nav.ejs') %>
+        <div class="detail-bg">
+            <div class="chat-screen">
+                <%for(let i=0; i < chatting.length; i++){%>
+                    <%if(chatting[i].user==user){%>
+                        <div class="chat-box mine">
+                            <span>
+                                <%=chatting[i].content%>
+                            </span>
+                            <span style="font-size: 10px;">
+                                <%=String(chatting[i].date.getHours()).padStart(2, '0' )%>:
+                                    <%=String(chatting[i].date.getMinutes()).padStart(2,'0')%>
+                            </span>
+                        </div>
+                        <%}else{%>
+                            <div class="chat-box">
+                                <span>
+                                    <%=chatting[i].content%>
+                                </span>
+                                <span style="font-size: 10px;">
+                                    <%=String(chatting[i].date.getHours()).padStart(2, '0' )%>:
+                                        <%=String(chatting[i].date.getMinutes()).padStart(2,'0')%>
+                                </span>
+                            </div>
+                            <%}%>
+                                <%}%>
+            </div>
+        </div>
+        <div class="chat-form">
+            <input class="chat-input">
+            <button class="chat-button" onclick="sendMessage()">전송</button>
+        </div>
+</body>
+
+<!-- Socket.io 세팅 -->
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.7.2/client-dist/socket.io.min.js"></script>
+<script>
+    const socket = io()
+
+    /* 함수 설명~
+    // socket.emit(): 서버로 데이터 송신
+    socket.emit('유저데이터이름', '유저데이터')
+
+    // 유저측 데이터 수신도 마찬가지로 socket.on 사용
+    socket.on('서버데이터이름', (data)=>{
+        console.log(data);
+    })
+    */
+
+    // 실제 기능 설명
+    // 룸 조인 요청
+    socket.emit('ask-join', '<%=room._id%>')
+
+    // 메시지 보내기 함수
+    function sendMessage() {
+        // 내용 불러오기
+        let data = document.querySelector('.chat-input').value;
+        // 내용이 없다면 return
+        if (data.length == 0) return
+        // 서버에게 데이터 송신
+        socket.emit('message', {
+            room: '<%=room._id%>',
+            user: '<%=user%>',
+            msg: data
+        });
+    }
+
+    // 서버에게서 메시지 받았을 때
+    socket.on('broadcast', (data) => {
+        let temp = document.querySelector('.chat-screen');
+        let content
+        let date = new Date(data.date)
+
+        // 보낸 유저가 자기 자신이라면
+        if (data.user == '<%=user%>') {
+            // mine class 포함
+            content = `
+        <div class="chat-box mine">
+            <span>${data.msg}</span>
+            <span style="font-size: 10px;">
+                ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}
+            </span>
+        </div>
+        `
+            // input box 내용 지우기
+            document.querySelector('.chat-input').value = '';
+        }
+        // 아니면
+        else
+            // mina class 미포함
+            content = `
+        <div class="chat-box">
+            <span>${data.msg}</span>
+            <span style="font-size: 10px;">
+                ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}
+            </span>
+        </div>
+        `
+        // html 업데이트
+        temp.innerHTML += content;
+    })
+</script>
+
+</html>

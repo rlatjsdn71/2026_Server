@@ -1,0 +1,44 @@
+<!-- ejs 파일은 일반적으로 views 폴더에 생성 -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>list</title>
+    <link rel="stylesheet" href="/main.css">
+</head>
+
+<body class="grey-bg">
+    <%- include('nav.ejs') %>
+        <div class="white-bg">
+            <% for(let i=(page - 1) * 5; i < page * 5 && i < list.length; i++){ %>
+                <div class="list-box">
+                    <h4>
+                        <a href="/chat/detail?chatID=<%=list[i]._id%>">
+                            <%if(user==list[i].participants[0]){%>
+                                <%= list[i].participants[1] %>님 과의 채팅
+                            <%}else{%>
+                                <%= list[i].participants[0] %>님 과의 채팅
+                            <%}%>
+                        </a>
+                    </h4>
+                </div>
+                <% }%>
+        </div>
+        <div class="test-bg">
+            <% for(let i=0; i < list.length / 5; i ++){ %>
+                <button onclick="MovePage('<%=i+1%>')">
+                    <%=i + 1%>
+                </button>
+                <%}%>
+        </div>
+</body>
+<script>
+    function MovePage(page) {
+        window.location.href = '/chat/list/' + page;
+    }
+</script>
+
+</html>
