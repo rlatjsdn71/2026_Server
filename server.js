@@ -34,6 +34,7 @@ let db;
 connectDB.then((client) => { // mongdodb와 연결
     console.log('DB연결성공')
     db = client.db('forum') // forum 데이터 베이스와 연결
+
     // 포트번호를 환경변수로 저장하여 사용 ( .env 파일 참고)
     server.listen(process.env.PORT, () => {
         console.log('http://localhost:8080 에서 서버 실행중')

@@ -21,12 +21,24 @@ const upload = multer({
     })
 })
 
-// DB 내용 사용하기
+// DB 내용 사용하기 + SSE 설정하기
 const { ObjectId } = require("mongodb");
 const connectDB = require('./../database.js');
 let db;
+let changeStream
+
+// (SSE) 배열 형태로 조건 지정 변화를 감지할 상태에 대한 조건 지정 가능
+let condition = [
+    // $match 안에 정확한 조건 명시
+    { $match: { operationType: 'insert' } } // operationType이 insert인 경우(삽입 연산인 경우)
+];
+
 connectDB.then((client) => {
     db = client.db('forum')
+
+    // (SSE) collection().watch(): mongodb에서 컬렉션에 대한 상태 변화 감지 함수
+    changeStream = db.collection('post').watch(condition); // 조건을 아규먼트로 전달~
+
 }).catch((err) => {
     console.log(err)
 });
@@ -133,11 +145,11 @@ router.put('/updating/:postID', async (req, res) => {
             // {filter}: 찾을 값
             {
                 _id: new ObjectId(req.params.postID),
-                username: req.user.username // 작성자와 사용자가 같아야 글 수정 가능
+                user: req.user.username // 작성자와 사용자가 같아야 글 수정 가능
             },
             // {$set:{data}}: 수정할 값 ($set 사용 안하면 해당 값이 수정되는 것이 아니라 전체가 덮어씌워짐)
             { $set: { title: req.body.title, content: req.body.content } });
-        res.redirect('/detail/' + req.params.postID);
+        res.redirect(`/detail/${req.params.postID}/1`);
     }
 })
 
@@ -147,7 +159,7 @@ router.delete('/deleting', async (req, res) => {
     else {
         // query string 문법 사용
         let target = await db.collection('post').findOne({ _id: new ObjectId(req.query.postID) });
-    
+
         // 이미지 삭제
         if (target.img) {
             try {
@@ -155,7 +167,7 @@ router.delete('/deleting', async (req, res) => {
                 // 이미지 삭제를 위한 DeleteObjectCommand 오브젝트 생성
                 const deleteObject = new DeleteObjectCommand({
                     Bucket: process.env.Bucket, // 버킷 이름
-                    Key: key[key.length-1] // 삭제할 이미지 key (이미지 url의 마지막 요소)
+                    Key: key[key.length - 1] // 삭제할 이미지 key (이미지 url의 마지막 요소)
                 });
                 // s3에게 삭제 오브젝트를 전송해 삭제 처리
                 await s3.send(deleteObject);
@@ -163,7 +175,7 @@ router.delete('/deleting', async (req, res) => {
                 console.error(err);
             }
         }
-        
+
         await db.collection('comment').deleteMany({ postID: target._id });
         await db.collection('post').deleteOne({
             _id: target._id,
@@ -218,6 +230,39 @@ router.post('/comment', async (req, res) => {
 router.delete('/delComment', async (req, res) => {
     await db.collection('comment').deleteOne({ _id: new ObjectId(req.query.commentID) });
     res.send();
+})
+
+// SSE 사용하기 (실시간 단방향 통신(서버 -> 유저)) (상단 changeStream 변수 설정 참고)
+router.get('/stream/list', (req, res) => {
+    // 패킷 헤더 설정
+    res.writeHead(200, {
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache"
+    });
+
+    // 유저에게 데이터 송신, 2개의 res.wirte()함수 사용 (형식 꼭 맞춰야 함 공백, 개행문자 포함)
+    /*
+    res.write('event: 작명\n');
+    res.write('data: 내용\n\n');
+    */
+
+    // 아래처럼 작성하면 1초마다 한 번씩 메시지 보냄
+    /*
+    setInterval(() => {
+        res.write('event: 작명\n');
+        res.write('data: 바보\n\n');
+    }, 1000)
+    */
+
+    // 변수에 저장 후 .on('change')(상태 변화에 대한 이벤트 리스너) 붙여서 상태 변화 시 실행할 내용 작성 
+    changeStream.on('change', (result) => {
+        // result에 상태 변화에 대한 정보가 전달됨
+        //console.log(result);
+        res.write('event: insert\n');
+        res.write(`data: ${JSON.stringify(result.fullDocument)}\n\n`);
+    })
+    // 서버에게 SSE 요청하는 법은 list.ejs 파일 참고!
 })
 
 module.exports = router;

@@ -28,7 +28,7 @@
                         </a>
                         <%if(posts[i].img){%>
                             <span>*</span>
-                        <%}%>
+                            <%}%>
 
                     </h4>
                     <p>
@@ -55,9 +55,8 @@
     <%- %>: 내용 출력(내용이 html 이면 렌더해줌)
     <%= %>: 내용 출력(내용 그대로 출력)
     */
-   
     function MovePage(page) {
-            window.location.href = '/list/' + page;
+        window.location.href = '/list/' + page;
     }
 
     // JS로 get 요청 구현하기
@@ -65,6 +64,38 @@
         let target = document.querySelector('.search-box').value;
         // window.location.href 하면 해당 url로 get 요청 날려줌
         window.location.href = `/search/?target=${target}&page=1`
+    })
+
+    // 서버에게 SSE 요청 보내는 법!
+    let eventSource = new EventSource('/stream/list');
+    // 요청 성공 시 SSE 받을 수 있음
+
+    // 메시지 수신 시 실행
+    /*
+    eventSource.addEventListener('작명', (e)=>{
+        // 서버가 송신한 데이터는 e.data에 있음
+        console.log(e.data);
+    });
+    */
+
+    eventSource.addEventListener('insert', (e) => {        
+        if ('<%=posts.length%>' % 5 == 0) {
+            let temp = `<button onclick="MovePage(${'<%=posts.length%>'/ 5 + 1})">${'<%=posts.length%>'/ 5 + 1}</button>`
+            document.querySelector('.test-bg').innerHTML += temp;
+            return;
+        }
+        if('<%=page%>' * 5 - '<%=posts.length%>' < 0) return;
+        let data = JSON.parse(e.data);
+        let temp = `
+        <div class="list-box">
+            <h4>
+                <a href="/detail/${data._id}/1">${data.title}</a>`
+        if (data.img) temp += '<span>*<span>'
+        temp += `
+        </h4>
+        <p>${data.content}</p>
+        </div>`
+        document.querySelector('.white-bg').innerHTML += temp;
     })
 </script>
 
