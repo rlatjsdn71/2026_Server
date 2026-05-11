@@ -18,7 +18,11 @@
                     <h4>
                         <a href="/chat/detail?chatID=<%=list[i]._id%>">
                             <%if(user==list[i].participants[0]){%>
-                                <%= list[i].participants[1] %>님 과의 채팅
+                                <%if(list[i].participants[1]){%>
+                                    <%= list[i].participants[1] %>님 과의 채팅
+                                <%}else{%>
+                                    상대방이 떠났습니다
+                                <%}%>
                             <%}else{%>
                                 <%= list[i].participants[0] %>님 과의 채팅
                             <%}%>

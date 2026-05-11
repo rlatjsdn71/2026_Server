@@ -89,7 +89,21 @@ io.on('connection', (socket) => {
     user: '<%=user%>', 보낸 유저
     msg: data 메시지 내용
     */
-    socket.on('message', (data) => {
+    socket.on('message', async (data) => {
+        let room = await db.collection('chatroom').findOne({ _id: new ObjectId(data.room) });
+        // 무결성 검사
+        if (!room) { // 채팅방이 있는지 확인
+            io.to(data.room).emit('err', 'NOROOM');
+            return;
+        }
+        if (room.participants.length == 1) { // 활성화된 채팅장인지 확인
+            io.to(data.room).emit('err', 'DEACTIVATED');
+            return;
+        }
+        if (!room.participants.includes(data.user)) { // 유저가 해당 채팅방에 있는지 확인
+            io.to(data.room).emit('err', 'NOTINCLUDED');
+            return;
+        }
         // 날짜 정보
         let date = new Date()
         // 룸에 포함된 유저들에게 메시지 전송
@@ -106,8 +120,42 @@ io.on('connection', (socket) => {
             date: date // 날짜
         });
     });
+
+    // 채팅방 나가기 요청 처리
+    socket.on('quit', async (data) => {
+        let room = await db.collection('chatroom').findOne({ _id: new ObjectId(data.room) });
+        // 무결성 검사
+        if (!room) { // 채팅방이 있는지 확인
+            io.to(data.room).emit('err', 'NOROOM');
+            return;
+        }
+        if (!room.participants.includes(data.user)) { // 유저가 해당 채팅방에 있는지 확인
+            io.to(data.room).emit('err', 'NOTINCLUDED');
+            return;
+        }
+
+        // 룸에서 유저 제거
+        // socket.leave(data.room);
+
+        // 채팅방 제거
+        if (room.participants.length == 1) {
+            await db.collection('chatroom').deleteOne({ _id: room._id });
+            db.collection('chatting').deleteMany({ chatID: room._id });
+        }
+        // 채팅방 나가기
+        else {
+            let temp = room.participants.filter((a) => a != data.user);
+            await db.collection('chatroom').updateOne(
+                { _id: room._id },
+                { $set: { participants: temp } }
+            );
+        }
+
+        io.to(data.room).emit('quit', {
+            user: data.user
+        });
+    })
 });
-// 채팅방 나가기(삭제) 기능 구현해보장~
 
 
 

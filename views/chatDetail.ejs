@@ -35,11 +35,15 @@
                             </div>
                             <%}%>
                                 <%}%>
+                                    <%if(room.participants.length==1){%>
+                                        <h4> 상대가 채팅방을 떠났습니다.</h4>
+                                        <%}%>
             </div>
         </div>
         <div class="chat-form">
             <input class="chat-input">
             <button class="chat-button" onclick="sendMessage()">전송</button>
+            <button class="chat-button" onclick="quitChat()">나가기</button>
         </div>
 </body>
 
@@ -76,6 +80,14 @@
         });
     }
 
+    // 채팅방 나가기 함수
+    function quitChat() {
+        socket.emit('quit', {
+            room: '<%=room._id%>',
+            user: '<%=user%>'
+        })
+    }
+
     // 서버에게서 메시지 받았을 때
     socket.on('broadcast', (data) => {
         let temp = document.querySelector('.chat-screen');
@@ -109,6 +121,31 @@
         `
         // html 업데이트
         temp.innerHTML += content;
+    });
+
+    socket.on('quit', (data) => {
+        if (data.user == '<%=user%>') window.location.href = '/chat/list/1'
+        else document.querySelector('.chat-screen').innerHTML += '<h4>상대가 채팅방을 떠났습니다.</h4>'
+    });
+
+    // 에러 처리
+    socket.on('err', (err)=>{
+        switch(err){
+            case 'DEACTIVATED':
+                alert('채팅을 보낼 수 없습니다.')
+                break;
+            case 'NOROOM':
+                alert('없는 채팅방입니다.')
+                window.location.href = '/';
+                break;
+            case 'NOTINCLUDED':
+                alert('접근할 수 없는 채팅방입니다.');
+                window.location.href = '/';
+                break;
+            default:
+                window.location.href = '/';
+                break;
+        }
     })
 </script>
 
